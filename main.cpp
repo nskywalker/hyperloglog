@@ -2,6 +2,7 @@
 #include <fstream>
 #include <ranges>
 #include <array>
+#include <set>
 
 import hyperloglog;
 
@@ -9,24 +10,6 @@ std::pair<void*, int> makeKeyLen(const std::string& line) {
     void* p = const_cast<char*>(line.c_str());
     return std::pair<void*, int>{p, line.length()};
 }
-
-void test_dataset() {
-    auto test = [](uint8_t p) {
-        std::ifstream in("../dataset.txt");
-        HyperLogLog hll(p, makeKeyLen);
-        std::string line;
-        while (in >> line){
-            hll.insert(line);
-        }
-        std::println("dataset random strings from file: registers = {}, all elems = {}, HyperLogLog estimate = {}", p, 1'000'000, hll.calculate());
-    };
-    test(4);
-    test(16);
-    test(32);
-    test(64);
-    test(128);
-}
-
 float calc_precision(uint64_t ans, uint64_t elems)
 {
     float precision = 0;
@@ -36,6 +19,29 @@ float calc_precision(uint64_t ans, uint64_t elems)
         precision = 1.f - (ans - elems * 1.f) / elems;
     }
     return precision * 100.f;
+}
+
+
+
+void test_dataset() {
+    auto test = [](uint8_t p) {
+        std::ifstream in("../dataset.txt");
+        HyperLogLog hll(p, makeKeyLen);
+        std::string line;
+        uint64_t elems = 0;
+        while (in >> line){
+            hll.insert(line);
+            elems += 1;
+        }
+        auto ans = hll.calculate();
+        auto precision = calc_precision(ans, elems);
+        std::println("dataset random strings from file: registers = {}, unique elems = {}, HyperLogLog estimate = {}, precision = {} %", p, elems, ans, precision);
+    };
+    test(4);
+    test(16);
+    test(32);
+    test(64);
+    test(128);
 }
 
 void test_simple_strings() {
